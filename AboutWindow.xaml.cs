@@ -15,17 +15,13 @@ using System.Windows.Shapes;
 namespace EDGAR_Tool
 {
     /// <summary>
-    /// Interaction logic for ReportWindow.xaml
+    /// Interaction logic for about.xaml
     /// </summary>
-    public partial class ReportWindow : Window
+    public partial class AboutWindow : Window
     {
-        public ReportWindow(string url, string title)
+        public AboutWindow()
         {
             InitializeComponent();
-            this.Height = (System.Windows.SystemParameters.PrimaryScreenHeight * 0.75);
-            this.Width = (System.Windows.SystemParameters.PrimaryScreenWidth * 0.5);
-            this.Title = title;
-            browserCanvas.Navigate(url);
         }
     }
 }

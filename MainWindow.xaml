@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EDGAR_Tool"
         mc:Ignorable="d"
-        Title="EDGAR Tool" Height="588" Width="800">
+        Title="EDGAR Tool" Height="611" Width="1020">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
@@ -15,11 +15,11 @@
             <RowDefinition Height="430"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <ListBox x:Name="companyListBox" Grid.Column="0" Grid.Row="0" SelectionChanged="companyListBox_SelectionChanged" Margin="0,0,10,20"/>
+        <ListBox x:Name="companyListBox" Grid.Column="0" Grid.Row="0" SelectionChanged="companyListBox_SelectionChanged" Margin="0,0,729,20" Grid.ColumnSpan="2"/>
 
-        <ListBox x:Name="companyDocList" Grid.Column="1" Grid.Row="0" Margin="0,93,0,20" SelectionChanged="companyDocList_SelectionChanged">
+        <ListBox x:Name="companyDocList" Grid.Column="1" Grid.Row="0" Margin="83,134,0,20" SelectionChanged="companyDocList_SelectionChanged">
         </ListBox>
-        <Label Style="{StaticResource headerTextStyle}" x:Name="companyLabel" Content="Label" Grid.Column="1" HorizontalAlignment="Left" Height="27" VerticalAlignment="Top" Width="514"/>
+        <Label Style="{StaticResource headerTextStyle}" x:Name="companyLabel" Content="Label" Grid.Column="1" HorizontalAlignment="Left" Height="37" VerticalAlignment="Top" Width="699" Margin="83,0,0,0"/>
         <Grid Grid.Row="1" Grid.Column="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
@@ -30,19 +30,23 @@
                 <RowDefinition/>
                 <RowDefinition/>
                 <RowDefinition/>
+                <RowDefinition/>
             </Grid.RowDefinitions>
-            <Button x:Name="addCompanyButton" Grid.Column="0" Grid.Row="0" Content="+" Click="addCompanyButton_Click"/>
-            <Button x:Name="removeCompanyButton" Grid.Column="2" Grid.Row="0" Content="-" Margin="0,0,10,0" Click="removeCompanyButton_Click"/>
-            <Button x:Name="refreshButton" Grid.Column="1" Grid.Row="1" Content="Refresh"/>
-            <Button x:Name="optionsButton" Grid.Column="1" Grid.Row="2" Content="About" Click="openOptionsButton_Click" />
+            <TextBox x:Name="tickerTextBox" Grid.Column="0" Grid.Row="0" Margin="5"/>
+            <Button x:Name="addCompanyButton" Grid.Column="1" Grid.Row="0" Content="Add" Click="addCompanyButton_Click" ToolTip="Add ticker from text box"/>
+            <Button x:Name="removeCompanyButton" Grid.Column="2" Grid.Row="0" Content="Remove" Click="removeCompanyButton_Click" ToolTip="Remove selected company"/>
+            <Button x:Name="refreshButton" Grid.Column="1" Grid.Row="2" Content="Refresh" Grid.ColumnSpan="2" />
+            <Button x:Name="optionsButton" Grid.Column="1" Grid.Row="3" Content="About" Click="openOptionsButton_Click" Grid.ColumnSpan="2" />
         </Grid>
-        <Label Grid.Column="1" Margin="154,61,267,337">Only Submissions Before:</Label>
-        <DatePicker x:Name="dateSelector" Margin="352,61,10,342" Grid.Column="1" RenderTransformOrigin="1.346,1.81" IsEnabled="False"/>
-        <Button x:Name="openReportButton" IsEnabled="False" Content="View Filing" Grid.Column="1" HorizontalAlignment="Left" Margin="463,10,0,0" Grid.Row="1" VerticalAlignment="Top" Width="99" Click="openReportButton_Click"/>
-        <Button x:Name="openXbrlButton" IsEnabled="False" Content="GAAP Tool" Grid.Column="1" HorizontalAlignment="Left" Margin="463,35,0,0" Grid.Row="1" VerticalAlignment="Top" Width="99"/>
-        <Label x:Name="label" Content="(c)2021 Warren Pettee" Grid.Column="1" HorizontalAlignment="Left" Height="24" Margin="435,65,0,0" Grid.Row="1" VerticalAlignment="Top" Width="127"/>
-        <ComboBox x:Name="filterCombo" Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="352,27,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="filterCombo_SelectionChanged"/>
-        <Label x:Name="filterLabel" Content="Find Submission Type: " Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="209,27,0,0" VerticalAlignment="Top" Width="131"/>
-        <CheckBox x:Name="historyEnable"  Grid.Column="1" Margin="310,70,232,342" RenderTransformOrigin="12.889,1.556" Checked="historyEnable_Checked"/>
+        <Label Grid.Column="1" Margin="363,102,283,296">Only Submissions Before:</Label>
+        <DatePicker x:Name="dateSelector" Margin="572,102,10,301" Grid.Column="1" RenderTransformOrigin="1.346,1.81" IsEnabled="False"/>
+        <Button x:Name="openReportButton" IsEnabled="False" Content="View Filing" Grid.Column="1" HorizontalAlignment="Left" Margin="683,41,0,0" Grid.Row="1" VerticalAlignment="Top" Width="99" Click="openReportButton_Click"/>
+        <Button x:Name="openXbrlButton" IsEnabled="False" Content="GAAP Tool" Grid.Column="1" HorizontalAlignment="Left" Margin="683,66,0,0" Grid.Row="1" VerticalAlignment="Top" Width="99"/>
+        <ComboBox x:Name="filterCombo" Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="572,73,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="filterCombo_SelectionChanged"/>
+        <Label x:Name="filterLabel" Content="Find Submission Type: " Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="429,73,0,0" VerticalAlignment="Top" Width="131"/>
+        <CheckBox x:Name="historyEnable"  Grid.Column="1" Margin="541,111,232,301" RenderTransformOrigin="12.889,1.556" Checked="historyEnable_Checked"/>
+        <Label x:Name="limitLabel" Content="Limit Selection:" Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="429,42,0,0" VerticalAlignment="Top" Width="131"/>
+        <ComboBox x:Name="limitCombo" Grid.Column="1" HorizontalAlignment="Left" Height="26" Margin="572,42,0,0" VerticalAlignment="Top" Width="210" SelectionChanged="limitCombo_SelectionChanged"/>
+        <ProgressBar x:Name="progressBar" Grid.Column="1" Margin="10,115,649,0" Grid.Row="1" Visibility="Collapsed"/>
     </Grid>
 </Window>

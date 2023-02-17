@@ -12,6 +12,14 @@
             <Setter Property="Label.Foreground" Value="#0066cc"></Setter>
         </Style>
 
+        <Style x:Key="titleTextStyle">
+            <Setter Property="Label.VerticalAlignment" Value="Center"></Setter>
+            <Setter Property="Label.FontFamily" Value="Trebuchet MS"></Setter>
+            <Setter Property="Label.FontWeight" Value="Bold"></Setter>
+            <Setter Property="Label.FontSize" Value="24"></Setter>
+            <Setter Property="Label.Foreground" Value="#0066cc"></Setter>
+        </Style>
+
         <Style x:Key="labelStyle" TargetType="{x:Type Label}">
             <Setter Property="VerticalAlignment" Value="Top" />
             <Setter Property="HorizontalAlignment" Value="Left" />

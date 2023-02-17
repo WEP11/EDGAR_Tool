@@ -15,6 +15,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Net;
+
 
 
 namespace EDGAR_Tool
@@ -31,27 +33,59 @@ namespace EDGAR_Tool
         private string[] companyNames;
         private string[] companyTicks;
         private int companyCount;
+
+        private EdgarReader selectedCompany;
+
         public MainWindow()
         {
             System.Diagnostics.PresentationTraceSources.DataBindingSource.Switch.Level = System.Diagnostics.SourceLevels.Critical;
+
+            AboutWindow aboutDialog = new AboutWindow();
+            aboutDialog.Show();
+
             InitializeComponent();
             // Get Metadata
             loadMetadata();
 
             // Populate Company List
             getCompanyData();
-            populateDocumentList();
+            loadCompanyList();
+            selectCompany();
+            
             // Populate Filter Combo
             createFilterCombo();
         }
         private void removeCompany(string companyName)
         {
+            int removeIndex = -1;
+            int newSize = companyTicks.Length;
+            string[] newCIKs = new string[newSize];
+            string[] newNames = new string[newSize];
+            string[] newTicks = new string[newSize];
 
-        }
-
-        private void addCompany()
-        {
-
+            int count = 0;
+            for(int i=0; i< companyNames.Length; i++)
+            {
+                if (companyNames[i] == companyName)
+                {
+                    removeIndex = i;
+                    continue;
+                }
+                else
+                {
+                    newCIKs[count] = companyCIKs[i];
+                    newNames[count] = companyNames[i];
+                    newTicks[count] = companyTicks[i];
+                    count += 1;
+                }
+            }
+            if (removeIndex > 0)
+            {
+                companyNames = newNames;
+                companyCIKs = newCIKs;
+                companyTicks = newTicks;
+                loadCompanyList();
+            }
         }
 
         private void loadMetadata()
@@ -70,9 +104,8 @@ namespace EDGAR_Tool
         {
             ComboBoxItem newItem = new ComboBoxItem();
             newItem.IsSelected = true;
-            newItem.Content = "Last 25 Filings";
+            newItem.Content = "Any";
             filterCombo.Items.Add(newItem);
-            filterCombo.Items.Add("Last 50 Filings");
             for (int i=0; i<FILING_TYPECODES.Count; i++)
             {
                 newItem = new ComboBoxItem();
@@ -80,43 +113,78 @@ namespace EDGAR_Tool
                 newItem.ToolTip = FILING_TYPEDESCS[i].Replace("\"", string.Empty);
                 filterCombo.Items.Add(newItem);
             }
+
+            newItem = new ComboBoxItem();
+            newItem.IsSelected = true;
+            newItem.Content = "Last 25 Filings";
+            limitCombo.Items.Add(newItem);
+            limitCombo.Items.Add("Last 50 Filings");
+            limitCombo.Items.Add("Last 100 Filings");
+            limitCombo.Items.Add("Last 250 Filings");
+            limitCombo.Items.Add("All Available");
         }
 
-        private void populateDocumentList(string filter = null)
+        private void selectCompany()
         {
             // Get the selected company CIK
             string selected = companyNames[0];
-            int selectedCompany = 0;
+            int companyIndex = 0;
             if (companyListBox.SelectedItem != null)
             {
                 selected = companyListBox.SelectedItem.ToString();
             }
 
-
-            for (int i = 0; i < companyCount; i++)
+            for (int i = 0; i < companyNames.Length; i++)
             {
                 if (companyNames[i] == selected)
                 {
-                    selectedCompany = i;
+                    companyIndex = i;
                     break;
                 }
             }
 
-            // Get any document filters
+            selectedCompany = new EdgarReader(companyCIKs[companyIndex]);
+            companyLabel.Content = selectedCompany.getCompanyName();
+            populateDocumentList();
+        }
+
+        private void populateDocumentList(string filter = null, string limit = null)
+        {
+            int fileLimit = 25;
+            // Set list limit
+            if (limit != null)
+            {
+                switch(limit)
+                {
+                    case "Last 25 Filings":
+                        fileLimit = 25;
+                        break;
+                    case "Last 50 Filings":
+                        fileLimit = 50;
+                        break;
+                    case "Last 100 Filings":
+                        fileLimit = 100;
+                        break;
+                    case "Last 250 Filings":
+                        fileLimit = 250;
+                        break;
+                    case "All Available":
+                        fileLimit = 0;
+                        break;
+                }
+            }
+
+            // Set filter
             if (filter == null)
             {
                 filter = filterCombo.Text;
             }
-            switch (filter)
+            if (filter != "Any")
             {
-                case "Last 25 Filings":
-                case "Last 50 Filings": // Filter is the filter in these cases
-                    break;
-                default: // Break off first filing code in other cases
-                    filter = filter.Replace(" ", string.Empty);
-                    filter = filter.Split(',')[0];
-                    break;
+                filter = filter.Replace(" ", string.Empty);
+                filter = filter.Split(',')[0];
             }
+            
 
             // Collect historical cut-off if enabled
             string history = null;
@@ -126,23 +194,133 @@ namespace EDGAR_Tool
                 history = history_date.ToString("yyyyMMdd");
             }
 
-            EdgarReader testCompany = new EdgarReader(companyCIKs[selectedCompany], filter, history);
-            companyLabel.Content = testCompany.getCompanyName();
-            SyndicationFeed companyFeed = testCompany.getFeed();
-            
+            dynamic companyFeed = selectedCompany.getFeed();
+
             companyDocList.Items.Clear();
-            for (int i=0; i < companyFeed.Items.Count(); i++)
+
+            int fileCount = 0;
+            for (int i=0; i < companyFeed.filings.recent.accessionNumber.Count; i++)
             {
-                ListBoxItem docItem = new ListBoxItem();
-                docItem.Content = (companyFeed.Items.ElementAt(i).Title.Text + "\n\t" + companyFeed.Items.ElementAt(i).LastUpdatedTime.ToString("dd-MMM yyyy"));
-                docItem.Tag = companyFeed.Items.ElementAt(i).Links[0].Uri.OriginalString;
-                companyDocList.Items.Add(docItem);
+                // Filter the data if needed
+                bool createFiling = false;
+                if (filter != null)
+                {
+                    if (companyFeed.filings.recent.form[i].Contains(filter))
+                    {
+                        createFiling = true;
+                    }
+                    else if (filter == "Any")
+                    {
+                        createFiling = true;
+                    }
+                }
+                else
+                {
+                    createFiling = true;
+                }
+                
+                // Add filing to list
+                if (createFiling)
+                {
+                    string filingDesc = "";
+                    
+                    for (int j=0; j < FILING_TYPECODES.Count; j++)
+                    {
+                        if (companyFeed.filings.recent.form[i].Contains(FILING_TYPECODES[j].Split(',')[0]) || 
+                            companyFeed.filings.recent.form[i] == FILING_TYPECODES[j].Split(',')[0])
+                        {
+                            filingDesc = FILING_TYPEDESCS[j];
+                        }
+                    }
+
+                    ListBoxItem docItem = new ListBoxItem();
+                    docItem.Content = (companyFeed.filings.recent.form[i] + " - " + filingDesc + "\n\t" + companyFeed.filings.recent.filingDate[i]);
+                    string documentUrl = "https://www.sec.gov/Archives/edgar/data/" + companyFeed.cik + "/" + companyFeed.filings.recent.accessionNumber[i].Replace("-", "") + "/" + companyFeed.filings.recent.primaryDocument[i];
+                    docItem.Tag = documentUrl;
+                    companyDocList.Items.Add(docItem);
+                    fileCount += 1;
+                }
+                if (fileCount >= fileLimit) 
+                {
+                    break;
+                }
             }
+        }
+
+        private bool addCompanyToList(string ticker)
+        {
+            // Get CIK and Company information
+            string url = "https://sec.report/T/" + ticker;
+            // Load filing from URL as Text Stream (there are non-conforming XML components)
+            WebClient client = new WebClient();
+            client.Headers.Add("user-agent", "EDGAR Tool https://github.com/WEP11/EDGAR_Tool");
+            Stream webContent = client.OpenRead(url);
+
+            StreamReader txtReader = new StreamReader(webContent);
+
+            string line;
+            string company_name = null;
+            string company_cik = null;
+
+            // Get company information
+            while ((line = txtReader.ReadLine()) != null)
+            {
+                if (line.Contains("<title>" + ticker + "SEC Filing</title>"))
+                {
+                    return false;
+                }
+
+                // Get company name
+                if (line.Contains("<h1>" + ticker + " :"))
+                {
+                    string target = "<h1>" + ticker + " : ";
+                    int start = line.IndexOf(target) + target.Length;
+                    int end = line.LastIndexOf("</h1>");
+                    company_name = line.Substring(start, end - start);
+                }
+
+                // Get company CIK
+                if (line.Contains("<h2>SEC CIK "))
+                {
+                    string target = "<h2>SEC CIK ";
+                    int start = line.IndexOf(target) + target.Length;
+                    company_cik = line.Substring(start, 10);
+                }
+            }
+
+            Console.WriteLine(company_cik);
+            Console.WriteLine(company_name);
+            Console.WriteLine(ticker);
+
+            int newSize = companyTicks.Length + 1;
+            string[] newCIKs = new string[newSize];
+            string[] newNames = new string[newSize];
+            string[] newTicks = new string[newSize];
+
+            int count = 0;
+            for (int i = 0; i < companyNames.Length; i++)
+            {
+                newCIKs[count] = companyCIKs[i];
+                newNames[count] = companyNames[i];
+                newTicks[count] = companyTicks[i];
+                count += 1;
+            }
+            newCIKs[newSize - 1] = company_cik;
+            newNames[newSize - 1] = company_name;
+            newTicks[newSize - 1] = ticker;
+
+            companyNames = newNames;
+            companyCIKs = newCIKs;
+            companyTicks = newTicks;
+
+            // Reload company information
+            loadCompanyList();
+
+            return true;
         }
 
         private void getCompanyData()
         {
-            companyListBox.Items.Clear();
             // Check for company data file
             // If it doesn't exist, make a sample file
             if (!File.Exists("company_data.xml"))
@@ -183,7 +361,6 @@ namespace EDGAR_Tool
             {
                 if (read2.Name == "company")
                 {
-                    companyListBox.Items.Add(read2["name"]);
                     companyCIKs[i] = read2["cik"];
                     companyNames[i] = read2["name"];
                     companyTicks[i] = read2["ticker"];
@@ -195,9 +372,18 @@ namespace EDGAR_Tool
             reader.Dispose();
         }
 
+        private void loadCompanyList()
+        {
+            companyListBox.Items.Clear();
+            for (int i=0; i < companyNames.Length; i++)
+            {
+                companyListBox.Items.Add(companyNames[i]);
+            }
+        }
+
         private void companyListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            populateDocumentList();
+            selectCompany();
         }
 
         private void companyDocList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -208,12 +394,12 @@ namespace EDGAR_Tool
         private void openReportButton_Click(object sender, RoutedEventArgs e)
         {
             string selected_url = (companyDocList.SelectedItem as ListBoxItem).Tag.ToString();
-            
+            Console.WriteLine(selected_url);
             // Get HTML report text from filing
             EdgarFiling selected_document = new EdgarFiling(selected_url);
-            string document_text = selected_document.getFilingText();
-            string document_title = selected_document.getFilingType() + " - " + selected_document.getFiler();
-            ReportWindow viewer = new ReportWindow(document_text, document_title);
+            string document_text = selected_document.getPrimaryFilingText();
+            string document_title = "Filing Viewer";//selected_document.getFilingType() + " - " + selected_document.getFiler();
+            ReportWindow viewer = new ReportWindow(selected_url, document_title);
             viewer.Show();
 
         }
@@ -226,7 +412,12 @@ namespace EDGAR_Tool
 
         private void filterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            populateDocumentList((e.AddedItems[0] as ComboBoxItem).Content as string);
+            populateDocumentList((e.AddedItems[0] as ComboBoxItem).Content as string, limitCombo.Text);
+        }
+
+        private void limitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            populateDocumentList(filterCombo.Text, limitCombo.Text);
         }
 
         private void historyEnable_Checked(object sender, RoutedEventArgs e)
@@ -259,7 +450,25 @@ namespace EDGAR_Tool
 
         private void addCompanyButton_Click(object sender, RoutedEventArgs e)
         {
-            addCompany();
+            bool success = true;
+            string ticker = tickerTextBox.Text;
+            if (ticker != null)
+            {
+                progressBar.IsIndeterminate = true;
+                progressBar.Visibility = Visibility.Visible;
+                success = addCompanyToList(ticker);
+                progressBar.Visibility = Visibility.Collapsed;
+            }   
+            else
+            {
+                MessageBox.Show("Enter a valid ticker symbol in the text box", "Error", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            }
+
+            if (!success)
+            {
+                MessageBox.Show("Stock symbol does not exist", "Error", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            }
+
         }
     }
 }
