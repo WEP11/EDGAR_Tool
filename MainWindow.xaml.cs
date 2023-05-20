@@ -16,11 +16,17 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Net;
-
-
+using Newtonsoft.Json;
 
 namespace EDGAR_Tool
 {
+    public class EdgarDefinition
+    {
+        public string cik_str { get; set; }
+        public string ticker { get; set; }
+        public string title { get; set; }
+    }
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -249,44 +255,16 @@ namespace EDGAR_Tool
 
         private bool addCompanyToList(string ticker)
         {
-            // Get CIK and Company information
-            string url = "https://sec.report/T/" + ticker;
-            // Load filing from URL as Text Stream (there are non-conforming XML components)
-            WebClient client = new WebClient();
-            client.Headers.Add("user-agent", "EDGAR Tool https://github.com/WEP11/EDGAR_Tool");
-            Stream webContent = client.OpenRead(url);
-
-            StreamReader txtReader = new StreamReader(webContent);
-
-            string line;
+            // Get CIK information
             string company_name = null;
             string company_cik = null;
+            string url = "https://www.sec.gov/files/company_tickers.json";
+            // Load filing from URL as Text Stream (there are non-conforming XML components)
+            WebClient client = new WebClient();
+            client.Headers.Add("user-agent", "Warren Pettee wepettee@gmail.com");
+            string json_content = client.DownloadString(url);
+            List<EdgarDefinition> secLookup = JsonConvert.DeserializeObject<List<EdgarDefinition>>(json_content);
 
-            // Get company information
-            while ((line = txtReader.ReadLine()) != null)
-            {
-                if (line.Contains("<title>" + ticker + "SEC Filing</title>"))
-                {
-                    return false;
-                }
-
-                // Get company name
-                if (line.Contains("<h1>" + ticker + " :"))
-                {
-                    string target = "<h1>" + ticker + " : ";
-                    int start = line.IndexOf(target) + target.Length;
-                    int end = line.LastIndexOf("</h1>");
-                    company_name = line.Substring(start, end - start);
-                }
-
-                // Get company CIK
-                if (line.Contains("<h2>SEC CIK "))
-                {
-                    string target = "<h2>SEC CIK ";
-                    int start = line.IndexOf(target) + target.Length;
-                    company_cik = line.Substring(start, 10);
-                }
-            }
 
             Console.WriteLine(company_cik);
             Console.WriteLine(company_name);
